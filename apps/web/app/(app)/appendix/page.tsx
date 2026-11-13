@@ -35,6 +35,8 @@ export default function AppendixPage() {
                   <th>Abstraction</th>
                   <th>Execution</th>
                   <th>Orchestration</th>
+                  <th>Deployment / production</th>
+                  <th>Parallel vs sequential</th>
                   <th>Best fit</th>
                   <th>Watch out</th>
                 </tr>
@@ -50,6 +52,8 @@ export default function AppendixPage() {
                     <td>{f.abstraction}</td>
                     <td>{f.execution}</td>
                     <td>{f.orchestration}</td>
+                    <td>{f.deployment}</td>
+                    <td>{f.concurrency}</td>
                     <td>{f.bestFit}</td>
                     <td>{f.watchOut}</td>
                   </tr>
@@ -90,6 +94,15 @@ export default function AppendixPage() {
             <span className="pill acc">Choose if</span>{' '}
             <span className="muted">{fw.chooseIf}</span>
           </p>
+        </Card>
+      </div>
+
+      <div className="grid g2 mt">
+        <Card title={`${fw.name} · Deployment / production`}>
+          <p className="muted" style={{ margin: 0 }}>{fw.deployment}</p>
+        </Card>
+        <Card title={`${fw.name} · Parallel vs sequential`}>
+          <p className="muted" style={{ margin: 0 }}>{fw.concurrency}</p>
         </Card>
       </div>
 
