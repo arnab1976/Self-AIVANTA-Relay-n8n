@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aivanta.local/schemas/canvas.v1.json",
+  "title": "AIVANTA Canvas Graph (canvas.v1)",
+  "description": "Versioned graph owned by AIVANTA. Compiled by the runtime adapter (LangGraph in Conductor, AutoGen in Ensemble). Credentials appear only as vault:// references.",
+  "type": "object",
+  "required": ["schema_version", "nodes", "edges"],
+  "properties": {
+    "schema_version": { "const": "canvas.v1" },
+    "input_schema": { "type": "string", "default": "project.v1" },
+    "output_schema": { "type": "string", "default": "proposal_package.v1" },
+    "nodes": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+    "edges": { "type": "array", "items": { "$ref": "#/$defs/edge" } }
+  },
+  "$defs": {
+    "position": { "type": "object", "properties": { "x": { "type": "number" }, "y": { "type": "number" } } },
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "name"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9_\\-]+$", "maxLength": 64 },
+        "type": { "enum": ["start", "end", "agent", "tool", "decision", "approval", "data", "calc"] },
+        "name": { "type": "string", "maxLength": 120 },
+        "position": { "$ref": "#/$defs/position" },
+        "config": { "type": "object" }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "agent" } } }, "then": { "properties": { "config": { "$ref": "#/$defs/agentConfig" } } } },
+        { "if": { "properties": { "type": { "const": "tool" } } }, "then": { "properties": { "config": { "$ref": "#/$defs/toolConfig" } } } },
+        { "if": { "properties": { "type": { "const": "approval" } } }, "then": { "properties": { "config": { "$ref": "#/$defs/approvalConfig" } } } },
+        { "if": { "properties": { "type": { "const": "calc" } } }, "then": { "properties": { "config": { "$ref": "#/$defs/calcConfig" } } } }
+      ]
+    },
+    "edge": {
+      "type": "object",
+      "required": ["id", "source", "target"],
+      "properties": { "id": { "type": "string" }, "source": { "type": "string" }, "target": { "type": "string" }, "label": { "type": ["string", "null"] } }
+    },
+    "agentConfig": {
+      "type": "object",
+      "required": ["template", "model_profile", "input_schema", "output_schema"],
+      "properties": {
+        "template": { "type": "string" },
+        "role": { "type": "string" },
+        "description": { "type": "string" },
+        "instructions": { "type": "string", "maxLength": 4000 },
+        "model_profile": { "type": "string" },
+        "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
+        "frequency_penalty": { "type": "number", "minimum": 0, "maximum": 2 },
+        "presence_penalty": { "type": "number", "minimum": 0, "maximum": 2 },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "mcp_tools": { "type": "array", "items": { "type": "string" } },
+        "input_schema": { "type": "string" },
+        "output_schema": { "type": "string" },
+        "retry": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "timeout_s": { "type": "integer", "minimum": 5, "maximum": 900 },
+        "guardrails": { "type": "array", "items": { "type": "string" } },
+        "team_pattern": { "enum": ["single", "author_reviewer"] },
+        "fail_simulation": { "type": "boolean" }
+      }
+    },
+    "toolConfig": {
+      "type": "object",
+      "required": ["tool_id", "operation", "credential_ref"],
+      "properties": {
+        "tool_id": { "type": "string" },
+        "operation": { "type": "string" },
+        "credential_ref": { "type": "string", "pattern": "^vault://" },
+        "timeout_s": { "type": "integer" },
+        "retry": { "type": "integer" }
+      }
+    },
+    "approvalConfig": {
+      "type": "object",
+      "required": ["approver_role"],
+      "properties": { "approver_role": { "type": "string" }, "sla_hours": { "type": "integer" }, "evidence": { "type": "string" } }
+    },
+    "calcConfig": {
+      "type": "object",
+      "required": ["rate_card_version"],
+      "properties": { "formula": { "type": "string" }, "rate_card_version": { "type": "string" }, "currency_rule": { "type": "string" }, "tax_rule": { "type": "string" } }
+    }
+  }
+}

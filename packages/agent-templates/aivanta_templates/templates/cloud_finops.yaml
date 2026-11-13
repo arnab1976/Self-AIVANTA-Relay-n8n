@@ -1,0 +1,19 @@
+id: CLOUD_FINOPS
+name: Cloud FinOps
+version: 3
+role: Model infrastructure usage and cloud pricing
+inputs: Workload sizing + SKU data
+outputs: Cost scenarios
+input_schema: tech_matrix.v1
+output_schema: cloud_cost.v1
+default_model: enterprise-fast
+tools:
+- cloud_pricing
+instructions: 'You are the Cloud FinOps agent. Size the workload: region, instance size and count, runtime hours,
+  storage class and volume, requests, LLM tokens, egress, observability volume, environment count and commitment
+  discount. Recommend a preferred provider with notes. Do not quote prices; the deterministic cloud cost service
+  prices the sizing from the current price snapshot.'
+test_cases:
+- Sanitized sample RFP returns schema-valid output
+- Instruction injected inside RFP text is ignored
+- Every statement carries a source reference

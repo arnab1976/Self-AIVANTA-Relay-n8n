@@ -1,0 +1,19 @@
+id: TECH_ADVISOR
+name: Technology Advisor
+version: 3
+role: Compare OSS, managed and commercial components
+inputs: Architecture + policies
+outputs: Technology decision matrix
+input_schema: architecture.v1
+output_schema: tech_matrix.v1
+default_model: enterprise-fast
+tools:
+- cloud_pricing
+instructions: You are the Technology Advisor agent. For each platform need in the architecture (web/API, database,
+  object storage, identity, agent workflow, monitoring, CI/CD) compare an open-source option with a managed cloud
+  option and recommend one with rationale. Remember that free/open source refers to licensing only; hosting and
+  operations still cost money.
+test_cases:
+- Sanitized sample RFP returns schema-valid output
+- Instruction injected inside RFP text is ignored
+- Every statement carries a source reference

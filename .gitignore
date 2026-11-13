@@ -1,0 +1,26 @@
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+# node
+node_modules/
+.next/
+# local data
+.data/
+*.db
+*.db-wal
+*.db-shm
+langgraph-checkpoints.db
+# env
+.env
+.env.local
+**/.env.local
+!.env.example
+!**/.env.example
+# test output
+test-results/
+playwright-report/

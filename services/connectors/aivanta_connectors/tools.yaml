@@ -1,0 +1,96 @@
+# Tool registry served through the MCP gateway (blueprint section 11).
+# Tenants can approve or revoke each tool; unapproved tools fail canvas validation.
+# Credentials are vault references only. `external: true` means the action leaves
+# AIVANTA (writes to another system or sends a message) and must sit behind a
+# Human Approval node on every path.
+tools:
+  - id: document_reader
+    kind: Document
+    description: Read text from an uploaded RFP (PDF, DOCX, XLSX, TXT) stored for the project.
+    endpoint: mcp://gateway/docs/read
+    scopes: [files.read.project]
+    credential_ref: vault://docs/reader
+    timeout_s: 60
+    approved: true
+    external: false
+  - id: ocr_parser
+    kind: Document
+    description: Parse document structure; OCR scanned pages where necessary.
+    endpoint: mcp://gateway/docs/ocr
+    scopes: [files.read.project]
+    credential_ref: vault://docs/ocr
+    timeout_s: 180
+    approved: true
+    external: false
+  - id: object_store
+    kind: Storage
+    description: Fetch project objects (source RFPs, generated files) from encrypted object storage.
+    endpoint: mcp://gateway/store/objects
+    scopes: [objects.read.project]
+    credential_ref: vault://store/ro
+    timeout_s: 30
+    approved: true
+    external: false
+  - id: template_renderer
+    kind: Document export
+    description: Render approved artifacts to DOCX / PDF / XLSX through the document engine.
+    endpoint: mcp://gateway/docs/render
+    scopes: [objects.write.project]
+    credential_ref: vault://docs/render
+    timeout_s: 120
+    approved: true
+    external: true
+  - id: sharepoint_search
+    kind: SharePoint
+    description: Search approved prior proposals, templates and architecture patterns.
+    endpoint: mcp://gateway/m365/sites
+    scopes: [Sites.Selected.read]
+    credential_ref: vault://m365/sites
+    timeout_s: 45
+    approved: true
+    external: false
+  - id: crm_opportunity
+    kind: CRM
+    description: Read opportunity and client metadata.
+    endpoint: mcp://gateway/crm/opportunity
+    scopes: [opportunity.read]
+    credential_ref: vault://crm/ro
+    timeout_s: 30
+    approved: true
+    external: false
+  - id: hrms_availability
+    kind: HRMS
+    description: Query approved staffing availability and skills.
+    endpoint: mcp://gateway/hrms/availability
+    scopes: [availability.read, skills.read]
+    credential_ref: vault://hrms/ro
+    timeout_s: 30
+    approved: true
+    external: false
+  - id: jira_backlog
+    kind: Jira / Confluence
+    description: Create delivery epics and stories for the approved baseline.
+    endpoint: mcp://gateway/atlassian/jira
+    scopes: [write:jira-work.project]
+    credential_ref: vault://atlassian/jira
+    timeout_s: 60
+    approved: true
+    external: true
+  - id: cloud_pricing
+    kind: Cloud pricing
+    description: Official AWS, Azure and GCP price lists with region/SKU metadata; cached snapshots with effective dates.
+    endpoint: mcp://gateway/pricing
+    scopes: [pricing.read]
+    credential_ref: vault://pricing/ro
+    timeout_s: 90
+    approved: true
+    external: false
+  - id: email_send
+    kind: Email
+    description: Send an email from the shared presales mailbox.
+    endpoint: mcp://gateway/m365/mail
+    scopes: [Mail.Send.shared]
+    credential_ref: vault://m365/mail
+    timeout_s: 30
+    approved: false
+    external: true

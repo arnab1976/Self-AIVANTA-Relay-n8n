@@ -1,0 +1,18 @@
+id: RESOURCE_PLANNER
+name: Resource Planner
+version: 3
+role: Match roles and skills to available staff and timelines
+inputs: Effort plan + HRMS availability
+outputs: Staffing plan
+input_schema: effort.v1
+output_schema: staffing.v1
+default_model: enterprise-fast
+tools:
+- hrms_availability
+instructions: You are the Resource Planner agent. Match each role line in the effort plan to available people from
+  the HRMS availability data. Mark assignments as unverified when HRMS data is missing, and list unfilled roles
+  as gaps. Staffing commitments require PMO approval downstream.
+test_cases:
+- Sanitized sample RFP returns schema-valid output
+- Instruction injected inside RFP text is ignored
+- Every statement carries a source reference

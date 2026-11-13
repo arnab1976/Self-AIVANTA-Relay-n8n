@@ -1,0 +1,66 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[dev]"
+      - run: ruff check . --exit-zero
+      - run: pytest -q            # emulated n8n, mock LLM
+        env: { LLM_PROVIDER: mock }
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+
+  n8n-live:                       # the same scenarios against a real n8n
+    runs-on: ubuntu-latest
+    services:
+      n8n:
+        image: docker.n8n.io/n8nio/n8n:2.45.7
+        ports: ["5678:5678"]
+        env:
+          N8N_DIAGNOSTICS_ENABLED: "false"
+          N8N_PERSONALIZATION_ENABLED: "false"
+          N8N_SECURE_COOKIE: "false"
+          N8N_ENCRYPTION_KEY: ci-only-encryption-key-0123456789
+          WEBHOOK_URL: http://localhost:5678/
+    env:
+      N8N_MODE: rest
+      N8N_API_URL: http://localhost:5678/api/v1
+      N8N_WEBHOOK_URL: http://localhost:5678
+      AIVANTA_BRIDGE_URL: http://172.17.0.1:8000     # n8n runs in a container: reach the API on the Docker host
+      AIVANTA_BRIDGE_TOKEN: ci-bridge-token-0123456789abcdef
+      LLM_PROVIDER: mock
+      RUN_EXECUTION: inline
+      JWT_SECRET: ci-secret-for-testing-only-32-bytes!
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[dev]"
+      - name: wait for n8n
+        run: for i in $(seq 1 60); do curl -sf localhost:5678/healthz && break; sleep 2; done
+      - run: python scripts/n8n_bootstrap.py --n8n http://localhost:5678 --email ci@example.com --password 'Ci-Passw0rd-2026!' --write-env .env
+      - name: start API
+        run: |
+          set -a; . ./.env; set +a
+          nohup uvicorn aivanta_api.main:app --host 0.0.0.0 --port 8000 > api.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf localhost:8000/api/health && break; sleep 1; done
+      - name: live tests
+        run: |
+          set -a; . ./.env; set +a
+          LIVE_N8N=1 LIVE_API=http://localhost:8000 pytest -q tests/live
+      - if: failure()
+        run: cat api.log

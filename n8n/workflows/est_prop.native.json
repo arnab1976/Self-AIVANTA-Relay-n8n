@@ -1,0 +1,1289 @@
+{
+  "name": "AIVANTA · template · Estimate-to-Proposal",
+  "nodes": [
+    {
+      "id": "349124ba-b8db-59a5-b5e2-6ac03718fbeb",
+      "name": "Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -170,
+        460
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aivanta/template/est_prop",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "622235f8-877d-5857-af8d-5e6da9cf1ca0",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "notes": "Started by the AIVANTA API (POST with run_id). Header auth = AIVANTA Bridge credential."
+    },
+    {
+      "id": "2285274b-08a8-540f-8cee-a9e07446c07c",
+      "name": "Start · Start",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        50,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/start",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"start\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "AIVANTA bridge · start · node start"
+    },
+    {
+      "id": "1038a4a7-fadd-51fb-83ce-dffde0730f98",
+      "name": "Approved BRD",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        50,
+        340
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"brdd\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Tenant-filtered retrieval · project-artifacts · step · node brdd"
+    },
+    {
+      "id": "a7392f02-9df6-5162-84d0-bdd610e6a41b",
+      "name": "Prepare · Effort Estimator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        190,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/agent_prepare",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"est\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "notes": "Builds the governed prompt: template, tenant overrides, redacted RFP, upstream artifacts, output schema. · agent_prepare · node est"
+    },
+    {
+      "id": "45b7e271-ef05-5662-bba5-80766bbf02de",
+      "name": "Effort Estimator",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        350,
+        460
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.task }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "={{ $json.system }}",
+          "maxIterations": 6
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "notes": "AIVANTA agent template EFFORT_ESTIMATOR · profile enterprise-reasoning"
+    },
+    {
+      "id": "75c73317-6eca-5312-aae9-8932faefd734",
+      "name": "Model · Effort Estimator",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        350,
+        660
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Prepare · Effort Estimator').first().json.model }}"
+        },
+        "options": {
+          "responseFormat": "json_object",
+          "temperature": 0.1,
+          "timeout": 180000,
+          "maxRetries": 1
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "aivanta-gateway",
+          "name": "AIVANTA Model Gateway"
+        }
+      },
+      "notes": "OpenAI-compatible AIVANTA model gateway: enforces the tenant model allowlist and records tokens and cost."
+    },
+    {
+      "id": "7c94765e-1b30-5674-8abe-11550d110ac1",
+      "name": "Record · Effort Estimator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        530,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/agent_record",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"est\", execution_id: $execution.id, text: $json.output }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Validates the agent output against its typed schema and stores it as a run output. · agent_record · node est"
+    },
+    {
+      "id": "b8b89fd0-4280-50b8-9aef-ad03431e530b",
+      "name": "Prepare · Cloud FinOps",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        490,
+        580
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/agent_prepare",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"fin\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "notes": "Builds the governed prompt: template, tenant overrides, redacted RFP, upstream artifacts, output schema. · agent_prepare · node fin"
+    },
+    {
+      "id": "cb0a7336-8eea-59ca-9780-084d016962a2",
+      "name": "Cloud FinOps",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        650,
+        580
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.task }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "={{ $json.system }}",
+          "maxIterations": 6
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "notes": "AIVANTA agent template CLOUD_FINOPS · profile enterprise-fast"
+    },
+    {
+      "id": "6a21cd8d-8241-5ac6-ab41-01649ae491f4",
+      "name": "Model · Cloud FinOps",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        650,
+        780
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Prepare · Cloud FinOps').first().json.model }}"
+        },
+        "options": {
+          "responseFormat": "json_object",
+          "temperature": 0.1,
+          "timeout": 180000,
+          "maxRetries": 1
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "aivanta-gateway",
+          "name": "AIVANTA Model Gateway"
+        }
+      },
+      "notes": "OpenAI-compatible AIVANTA model gateway: enforces the tenant model allowlist and records tokens and cost."
+    },
+    {
+      "id": "d42692b3-454b-5d88-9bfb-1199cfe261c6",
+      "name": "Record · Cloud FinOps",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        830,
+        580
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/agent_record",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"fin\", execution_id: $execution.id, text: $json.output }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Validates the agent output against its typed schema and stores it as a run output. · agent_record · node fin"
+    },
+    {
+      "id": "ba0a7c81-3632-545c-bba2-68e2cae8715d",
+      "name": "Prepare · Resource Planner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        790,
+        340
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/agent_prepare",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"res\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "notes": "Builds the governed prompt: template, tenant overrides, redacted RFP, upstream artifacts, output schema. · agent_prepare · node res"
+    },
+    {
+      "id": "980bba3c-9cef-5d23-86ce-eb092559572d",
+      "name": "Resource Planner",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        950,
+        340
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.task }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "={{ $json.system }}",
+          "maxIterations": 6
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "notes": "AIVANTA agent template RESOURCE_PLANNER · profile enterprise-fast"
+    },
+    {
+      "id": "8829dda5-fb80-57e5-86ab-e6560a83211a",
+      "name": "Model · Resource Planner",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        950,
+        540
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Prepare · Resource Planner').first().json.model }}"
+        },
+        "options": {
+          "responseFormat": "json_object",
+          "temperature": 0.1,
+          "timeout": 180000,
+          "maxRetries": 1
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "aivanta-gateway",
+          "name": "AIVANTA Model Gateway"
+        }
+      },
+      "notes": "OpenAI-compatible AIVANTA model gateway: enforces the tenant model allowlist and records tokens and cost."
+    },
+    {
+      "id": "71c8d897-569e-5ea4-8ccf-cbab5724a6a0",
+      "name": "Record · Resource Planner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1130,
+        340
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/agent_record",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"res\", execution_id: $execution.id, text: $json.output }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Validates the agent output against its typed schema and stores it as a run output. · agent_record · node res"
+    },
+    {
+      "id": "b89fdc28-06fb-586c-8b7f-4be6a303d2fe",
+      "name": "Commercial Pricing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        950,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"price\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Deterministic pricing engine on the tenant rate card (no LLM) · step · node price"
+    },
+    {
+      "id": "999faaae-5ea4-5ec3-82ce-e78b22031179",
+      "name": "Prepare · Governance Reviewer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1090,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/agent_prepare",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"gov\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "notes": "Builds the governed prompt: template, tenant overrides, redacted RFP, upstream artifacts, output schema. · agent_prepare · node gov"
+    },
+    {
+      "id": "8bf44c73-7969-5447-b7c9-0fe6bbdb1010",
+      "name": "Governance Reviewer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1250,
+        460
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.task }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "={{ $json.system }}",
+          "maxIterations": 6
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "notes": "AIVANTA agent template GOVERNANCE_REVIEWER · profile enterprise-reasoning"
+    },
+    {
+      "id": "1084734a-8d9b-5fcf-b84d-80a1c7a2553a",
+      "name": "Model · Governance Reviewer",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1250,
+        660
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Prepare · Governance Reviewer').first().json.model }}"
+        },
+        "options": {
+          "responseFormat": "json_object",
+          "temperature": 0.1,
+          "timeout": 180000,
+          "maxRetries": 1
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "aivanta-gateway",
+          "name": "AIVANTA Model Gateway"
+        }
+      },
+      "notes": "OpenAI-compatible AIVANTA model gateway: enforces the tenant model allowlist and records tokens and cost."
+    },
+    {
+      "id": "b7305513-d651-5122-a329-f2b8e12bbc49",
+      "name": "Record · Governance Reviewer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1430,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/agent_record",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"gov\", execution_id: $execution.id, text: $json.output }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Validates the agent output against its typed schema and stores it as a run output. · agent_record · node gov"
+    },
+    {
+      "id": "1e882602-1e88-5a27-8f2d-3ab96136a4b0",
+      "name": "Request approval · Commercial Approval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1350,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/approval_request",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"capp\", execution_id: $execution.id, resume_url: $execution.resumeUrl }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Creates the approval for role finance and hands AIVANTA the resume URL. · approval_request · node capp"
+    },
+    {
+      "id": "000dc925-ec3c-5e5a-b591-633c0f4b26c9",
+      "name": "Wait · Commercial Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1510,
+        460
+      ],
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "options": {}
+      },
+      "webhookId": "60c71f2e-0b98-5c35-a7d0-10f2482d7395",
+      "notes": "Execution pauses here until the approver decides in AIVANTA (segregation of duties enforced there)."
+    },
+    {
+      "id": "2c94bb75-4315-529a-a0af-8fe1572dc301",
+      "name": "Decision · Commercial Approval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1670,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/approval_result",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"capp\", execution_id: $execution.id, decision: $json.body }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "AIVANTA bridge · approval_result · node capp"
+    },
+    {
+      "id": "17881dc9-c4f2-574e-a9a8-e718a5b8dc64",
+      "name": "Commercial Approval",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1830,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ca62fc99-9e37-521a-9bcd-c2986ead0cd3",
+              "leftValue": "={{ $json.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "Rejected → the branch stops and the run fails."
+    },
+    {
+      "id": "0f4bb344-9fbc-5265-9b15-61c83d149246",
+      "name": "Prepare · SOW Author",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1690,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/agent_prepare",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"sow\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "notes": "Builds the governed prompt: template, tenant overrides, redacted RFP, upstream artifacts, output schema. · agent_prepare · node sow"
+    },
+    {
+      "id": "08f3d7cc-9e1c-5413-8adf-cdcbeea87b4f",
+      "name": "SOW Author",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1850,
+        460
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.task }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "={{ $json.system }}",
+          "maxIterations": 6
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "notes": "AIVANTA agent template SOW_AUTHOR · profile enterprise-reasoning"
+    },
+    {
+      "id": "90d64e4c-9535-5a22-8fe6-c513636ca105",
+      "name": "Model · SOW Author",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1850,
+        660
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Prepare · SOW Author').first().json.model }}"
+        },
+        "options": {
+          "responseFormat": "json_object",
+          "temperature": 0.1,
+          "timeout": 180000,
+          "maxRetries": 1
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "aivanta-gateway",
+          "name": "AIVANTA Model Gateway"
+        }
+      },
+      "notes": "OpenAI-compatible AIVANTA model gateway: enforces the tenant model allowlist and records tokens and cost."
+    },
+    {
+      "id": "498c51d7-36c0-5d15-966e-fa98fd319542",
+      "name": "Record · SOW Author",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2030,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/agent_record",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"sow\", execution_id: $execution.id, text: $json.output }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Validates the agent output against its typed schema and stores it as a run output. · agent_record · node sow"
+    },
+    {
+      "id": "ebe29889-468b-50a8-bbdd-e9518acd2ac1",
+      "name": "Export Proposal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2150,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"export\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "notes": "Tool gateway · template_renderer · render · step · node export"
+    },
+    {
+      "id": "ff92b303-47cc-5946-9d7e-40f20246bb28",
+      "name": "End",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2450,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"end\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Marks the end of the AIVANTA run · step · node end"
+    },
+    {
+      "id": "720a346b-e347-509f-bdc5-554ad742b9c9",
+      "name": "Join · Effort Estimator",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        40,
+        580
+      ],
+      "parameters": {
+        "numberInputs": 2
+      },
+      "notes": "Waits for every parallel branch before continuing."
+    },
+    {
+      "id": "b9606399-038e-5387-a9dc-855c5f2bf916",
+      "name": "Join · Commercial Pricing",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        800,
+        580
+      ],
+      "parameters": {
+        "numberInputs": 2
+      },
+      "notes": "Waits for every parallel branch before continuing."
+    },
+    {
+      "id": "0c7b2120-c5c4-59e8-a499-ed0627f000c3",
+      "name": "Join · Governance Reviewer",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        940,
+        580
+      ],
+      "parameters": {
+        "numberInputs": 2
+      },
+      "notes": "Waits for every parallel branch before continuing."
+    }
+  ],
+  "connections": {
+    "Trigger": {
+      "main": [
+        [
+          {
+            "node": "Start · Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare · Effort Estimator": {
+      "main": [
+        [
+          {
+            "node": "Effort Estimator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model · Effort Estimator": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Effort Estimator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Effort Estimator": {
+      "main": [
+        [
+          {
+            "node": "Record · Effort Estimator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare · Cloud FinOps": {
+      "main": [
+        [
+          {
+            "node": "Cloud FinOps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model · Cloud FinOps": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Cloud FinOps",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cloud FinOps": {
+      "main": [
+        [
+          {
+            "node": "Record · Cloud FinOps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare · Resource Planner": {
+      "main": [
+        [
+          {
+            "node": "Resource Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model · Resource Planner": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Resource Planner",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resource Planner": {
+      "main": [
+        [
+          {
+            "node": "Record · Resource Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare · Governance Reviewer": {
+      "main": [
+        [
+          {
+            "node": "Governance Reviewer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model · Governance Reviewer": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Governance Reviewer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Governance Reviewer": {
+      "main": [
+        [
+          {
+            "node": "Record · Governance Reviewer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request approval · Commercial Approval": {
+      "main": [
+        [
+          {
+            "node": "Wait · Commercial Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait · Commercial Approval": {
+      "main": [
+        [
+          {
+            "node": "Decision · Commercial Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision · Commercial Approval": {
+      "main": [
+        [
+          {
+            "node": "Commercial Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare · SOW Author": {
+      "main": [
+        [
+          {
+            "node": "SOW Author",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model · SOW Author": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SOW Author",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SOW Author": {
+      "main": [
+        [
+          {
+            "node": "Record · SOW Author",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start · Start": {
+      "main": [
+        [
+          {
+            "node": "Approved BRD",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Join · Effort Estimator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved BRD": {
+      "main": [
+        [
+          {
+            "node": "Join · Effort Estimator",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Join · Effort Estimator": {
+      "main": [
+        [
+          {
+            "node": "Prepare · Effort Estimator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record · Effort Estimator": {
+      "main": [
+        [
+          {
+            "node": "Prepare · Cloud FinOps",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Join · Commercial Pricing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare · Resource Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record · Cloud FinOps": {
+      "main": [
+        [
+          {
+            "node": "Join · Commercial Pricing",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Join · Commercial Pricing": {
+      "main": [
+        [
+          {
+            "node": "Commercial Pricing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Commercial Pricing": {
+      "main": [
+        [
+          {
+            "node": "Join · Governance Reviewer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record · Resource Planner": {
+      "main": [
+        [
+          {
+            "node": "Join · Governance Reviewer",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Join · Governance Reviewer": {
+      "main": [
+        [
+          {
+            "node": "Prepare · Governance Reviewer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record · Governance Reviewer": {
+      "main": [
+        [
+          {
+            "node": "Request approval · Commercial Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Commercial Approval": {
+      "main": [
+        [
+          {
+            "node": "Prepare · SOW Author",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record · SOW Author": {
+      "main": [
+        [
+          {
+            "node": "Export Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export Proposal": {
+      "main": [
+        [
+          {
+            "node": "End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "timezone": "UTC"
+  }
+}

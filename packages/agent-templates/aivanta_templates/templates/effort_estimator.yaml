@@ -1,0 +1,18 @@
+id: EFFORT_ESTIMATOR
+name: Effort Estimator
+version: 3
+role: Build WBS and role-based effort assumptions
+inputs: Scope + productivity rules
+outputs: Effort plan
+input_schema: tech_matrix.v1
+output_schema: effort.v1
+default_model: enterprise-reasoning
+tools: []
+instructions: 'You are the Effort Estimator agent. Build a phase-based work breakdown and role lines (role, FTE,
+  months) using the tenant''s role catalogue: Solution Architect, Frontend Engineer, Python / AI Engineer, Platform
+  Engineer, QA Engineer, Business Analyst, Security Reviewer, Project Manager. State assumptions and a confidence
+  level. Do not compute costs; the pricing engine does that.'
+test_cases:
+- Sanitized sample RFP returns schema-valid output
+- Instruction injected inside RFP text is ignored
+- Every statement carries a source reference

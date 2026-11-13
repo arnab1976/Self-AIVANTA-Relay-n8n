@@ -1,0 +1,823 @@
+{
+  "name": "AIVANTA · template · RFP-to-BRD",
+  "nodes": [
+    {
+      "id": "ec76b429-a92e-5288-9c02-6737cb79b4a5",
+      "name": "Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -170,
+        460
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aivanta/template/rfp_brd",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "00efba9d-b97a-5d27-b9a3-1efba01ec751",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "notes": "Started by the AIVANTA API (POST with run_id). Header auth = AIVANTA Bridge credential."
+    },
+    {
+      "id": "ebfb97a2-cadb-5734-981b-9e3c1900ab5f",
+      "name": "Start · Start",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        50,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/start",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"start\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "AIVANTA bridge · start · node start"
+    },
+    {
+      "id": "bae2ca5a-6874-5bad-8e2b-4b1bfda5bd2f",
+      "name": "RFP Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        350,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"upload\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "notes": "Tool gateway · object_store · get_rfp · step · node upload"
+    },
+    {
+      "id": "507692ac-0250-59c3-9e05-4ada537e8df0",
+      "name": "Parse / OCR",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        650,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"ocr\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "notes": "Tool gateway · ocr_parser · parse · step · node ocr"
+    },
+    {
+      "id": "88f3fb33-000a-583d-817d-8b224093afa2",
+      "name": "RFP Intelligence",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        950,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"rfp\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "notes": "AIVANTA executes agent template RFP_INTELLIGENCE · step · node rfp"
+    },
+    {
+      "id": "5bd17242-bbbd-528b-8f55-5663956d25b6",
+      "name": "Evaluate · Requirement Gap?",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1130,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"gap\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "AIVANTA bridge · step · node gap"
+    },
+    {
+      "id": "b478d37e-1e89-5425-ad6a-94904b4c5102",
+      "name": "Requirement Gap?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1310,
+        460
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "15b9a0cf-a5fd-57a5-a726-e369b6ccba81",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "gaps found",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "gaps found"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3276cb77-d779-52e6-82a2-7b0a7bff9a5e",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "no gaps",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "no gaps"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "notes": "Rule: open_clarifications > 0"
+    },
+    {
+      "id": "976ab553-cace-5f67-9142-5dca810c9665",
+      "name": "Request approval · Clarification Approval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1350,
+        340
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/approval_request",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"clar\", execution_id: $execution.id, resume_url: $execution.resumeUrl }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Creates the approval for role presales and hands AIVANTA the resume URL. · approval_request · node clar"
+    },
+    {
+      "id": "3998a9bd-d57e-5e0f-a6c0-9c60cb9ece68",
+      "name": "Wait · Clarification Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1510,
+        340
+      ],
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "options": {}
+      },
+      "webhookId": "5d54a6c6-c0cd-5123-a8e5-a182b5c97de7",
+      "notes": "Execution pauses here until the approver decides in AIVANTA (segregation of duties enforced there)."
+    },
+    {
+      "id": "4182f18e-879c-5e04-ab12-0093c9162c6b",
+      "name": "Decision · Clarification Approval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1670,
+        340
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/approval_result",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"clar\", execution_id: $execution.id, decision: $json.body }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "AIVANTA bridge · approval_result · node clar"
+    },
+    {
+      "id": "295edc33-fa94-5656-9778-1a354f78500f",
+      "name": "Clarification Approval",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1830,
+        340
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2b036699-8022-5d09-bd56-3fb0308fda31",
+              "leftValue": "={{ $json.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "Rejected → the branch stops and the run fails."
+    },
+    {
+      "id": "f04266d8-cf9d-594e-bc3f-208198f4201b",
+      "name": "BRD Author",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1850,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"brd\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "notes": "AIVANTA executes agent template BRD_AUTHOR · step · node brd"
+    },
+    {
+      "id": "80f09fc3-35d5-57af-94fa-1e73aba4e79b",
+      "name": "Governance Reviewer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2150,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"gov\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "notes": "AIVANTA executes agent template GOVERNANCE_REVIEWER · step · node gov"
+    },
+    {
+      "id": "25eee89a-f3b9-5429-8593-5b1acb53b769",
+      "name": "Request approval · BRD Sign-off",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2250,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/approval_request",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"bapp\", execution_id: $execution.id, resume_url: $execution.resumeUrl }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Creates the approval for role reviewer and hands AIVANTA the resume URL. · approval_request · node bapp"
+    },
+    {
+      "id": "a16112e8-ae29-56ed-8d70-c0c1c1abc678",
+      "name": "Wait · BRD Sign-off",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2410,
+        460
+      ],
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "options": {}
+      },
+      "webhookId": "c46260c5-836e-5cde-8887-0888e677d790",
+      "notes": "Execution pauses here until the approver decides in AIVANTA (segregation of duties enforced there)."
+    },
+    {
+      "id": "75f0e18e-f670-5326-99ad-b0bbfe09b4bb",
+      "name": "Decision · BRD Sign-off",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2570,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/approval_result",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"bapp\", execution_id: $execution.id, decision: $json.body }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "AIVANTA bridge · approval_result · node bapp"
+    },
+    {
+      "id": "a71babcb-c90d-55e0-94b0-b0dc2a88b5e4",
+      "name": "BRD Sign-off",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2730,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "58ba2b6c-a2af-5eed-8fed-9857b837c88f",
+              "leftValue": "={{ $json.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "Rejected → the branch stops and the run fails."
+    },
+    {
+      "id": "c76b302d-5087-5b53-9ca7-ef76f76319a6",
+      "name": "Export DOCX",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2750,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"export\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "notes": "Tool gateway · template_renderer · render · step · node export"
+    },
+    {
+      "id": "bbe9c3ee-51aa-57ff-a038-2221163b2546",
+      "name": "End",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3050,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"end\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Marks the end of the AIVANTA run · step · node end"
+    }
+  ],
+  "connections": {
+    "Trigger": {
+      "main": [
+        [
+          {
+            "node": "Start · Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate · Requirement Gap?": {
+      "main": [
+        [
+          {
+            "node": "Requirement Gap?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request approval · Clarification Approval": {
+      "main": [
+        [
+          {
+            "node": "Wait · Clarification Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait · Clarification Approval": {
+      "main": [
+        [
+          {
+            "node": "Decision · Clarification Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision · Clarification Approval": {
+      "main": [
+        [
+          {
+            "node": "Clarification Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request approval · BRD Sign-off": {
+      "main": [
+        [
+          {
+            "node": "Wait · BRD Sign-off",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait · BRD Sign-off": {
+      "main": [
+        [
+          {
+            "node": "Decision · BRD Sign-off",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision · BRD Sign-off": {
+      "main": [
+        [
+          {
+            "node": "BRD Sign-off",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start · Start": {
+      "main": [
+        [
+          {
+            "node": "RFP Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RFP Upload": {
+      "main": [
+        [
+          {
+            "node": "Parse / OCR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse / OCR": {
+      "main": [
+        [
+          {
+            "node": "RFP Intelligence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RFP Intelligence": {
+      "main": [
+        [
+          {
+            "node": "Evaluate · Requirement Gap?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requirement Gap?": {
+      "main": [
+        [
+          {
+            "node": "Request approval · Clarification Approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "BRD Author",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clarification Approval": {
+      "main": [
+        [
+          {
+            "node": "BRD Author",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BRD Author": {
+      "main": [
+        [
+          {
+            "node": "Governance Reviewer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Governance Reviewer": {
+      "main": [
+        [
+          {
+            "node": "Request approval · BRD Sign-off",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BRD Sign-off": {
+      "main": [
+        [
+          {
+            "node": "Export DOCX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export DOCX": {
+      "main": [
+        [
+          {
+            "node": "End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "timezone": "UTC"
+  }
+}

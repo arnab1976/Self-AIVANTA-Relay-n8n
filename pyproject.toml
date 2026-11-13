@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aivanta-relay"
+version = "1.0.0"
+description = "AIVANTA Relay — AIVANTA presales-to-delivery intelligence platform (n8n edition)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "sqlalchemy>=2.0.30",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "pyjwt[crypto]>=2.8",
+  "python-multipart>=0.0.9",
+  "python-docx>=1.1",
+  "reportlab>=4.2",
+  "openpyxl>=3.1",
+  "pypdf>=4.2",
+  "pyyaml>=6.0",
+  "httpx>=0.27",
+  "alembic>=1.13",
+  "email-validator>=2.1",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.1"]
+dev = ["pytest>=8.2", "pytest-asyncio>=0.23", "ruff>=0.5"]
+
+[tool.setuptools.packages.find]
+where = [
+  "apps/api",
+  "services/agent-runtime",
+  "services/pricing",
+  "services/document-engine",
+  "services/connectors",
+  "packages/graph-schema/python",
+  "packages/agent-templates",
+]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.json", "templates/*.yaml", "catalog/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 160
+target-version = "py311"

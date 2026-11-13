@@ -1,0 +1,9 @@
+{
+  "name": "@aivanta/graph-schema",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AIVANTA canvas graph schema (canvas.v1): JSON Schema, TypeScript types and live edge checks",
+  "main": "ts/index.ts",
+  "types": "ts/index.ts",
+  "files": ["ts", "canvas-graph.schema.json"]
+}

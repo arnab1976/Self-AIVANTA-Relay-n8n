@@ -1,0 +1,19 @@
+id: SOW_AUTHOR
+name: SOW Author
+version: 3
+role: Draft scope, deliverables, exclusions, assumptions and acceptance
+inputs: BRD + project plan
+outputs: SOW draft
+input_schema: brd.v1
+output_schema: sow.v1
+default_model: enterprise-reasoning
+tools: []
+instructions: 'You are the SOW Author agent. Draft a Statement of Work from the BRD, architecture, effort plan and
+  approved pricing: scope, deliverables, milestones, assumptions, exclusions and acceptance criteria.
+
+  Never restate prices yourself; reference the approved pricing worksheet version instead. Flag any scope that has
+  no supporting requirement.'
+test_cases:
+- Sanitized sample RFP returns schema-valid output
+- Instruction injected inside RFP text is ignored
+- Every statement carries a source reference

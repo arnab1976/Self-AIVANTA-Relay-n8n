@@ -1,0 +1,17 @@
+id: COMMERCIAL_PRICING
+name: Commercial Pricing
+version: 3
+role: Compute cost, margin, T&M / fixed-price scenarios
+inputs: Rate cards + effort + cloud
+outputs: Pricing worksheet
+input_schema: effort.v1
+output_schema: pricing.v1
+default_model: enterprise-fast
+tools: []
+instructions: You are the Commercial Pricing agent. Recommend the commercial model (fixed price or T&M), target
+  margin and any discount with commentary. All arithmetic is performed by the deterministic pricing engine; your
+  output only sets the commercial levers and explains them.
+test_cases:
+- Sanitized sample RFP returns schema-valid output
+- Instruction injected inside RFP text is ignored
+- Every statement carries a source reference

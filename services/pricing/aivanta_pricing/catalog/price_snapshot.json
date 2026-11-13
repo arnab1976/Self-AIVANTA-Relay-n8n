@@ -1,0 +1,15 @@
+{
+  "snapshot_id": "illustrative-2026-10",
+  "effective_date": "2026-10-20",
+  "illustrative": true,
+  "note": "Illustrative unit prices for development only. Replace with snapshots pulled from official provider price lists via the cloud_pricing connector.",
+  "region_multipliers": { "India (Mumbai)": 1.0, "US East": 0.95, "EU (Frankfurt)": 1.08, "Singapore": 1.04 },
+  "providers": {
+    "aws": { "name": "AWS", "stack": "ECS Fargate / RDS / S3", "support_pct": 0.10,
+      "unit_prices_usd": { "vcpu_hour": 0.048, "storage_gb_month": 0.023, "requests_per_million": 0.40, "llm_tokens_per_million": 3.0, "egress_gb": 0.09, "observability_gb": 0.50 } },
+    "gcp": { "name": "Google Cloud", "stack": "Cloud Run / Cloud SQL / Cloud Storage", "support_pct": 0.09,
+      "unit_prices_usd": { "vcpu_hour": 0.045, "storage_gb_month": 0.020, "requests_per_million": 0.40, "llm_tokens_per_million": 2.8, "egress_gb": 0.085, "observability_gb": 0.50 } },
+    "azure": { "name": "Azure", "stack": "Container Apps / Azure Database for PostgreSQL / Blob Storage", "support_pct": 0.10,
+      "unit_prices_usd": { "vcpu_hour": 0.047, "storage_gb_month": 0.021, "requests_per_million": 0.40, "llm_tokens_per_million": 3.1, "egress_gb": 0.087, "observability_gb": 0.55 } }
+  }
+}

@@ -1,0 +1,596 @@
+{
+  "name": "AIVANTA · template · Resource Deployment",
+  "nodes": [
+    {
+      "id": "4f8b121b-7a8d-596a-930a-9f3e2ad355e5",
+      "name": "Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -170,
+        460
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aivanta/template/res_deploy",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "3ebaf31e-967e-52df-8ff0-bb210fd235af",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "notes": "Started by the AIVANTA API (POST with run_id). Header auth = AIVANTA Bridge credential."
+    },
+    {
+      "id": "75ceee06-2e37-5123-87c0-7107ad36eef0",
+      "name": "Start · Start",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        50,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/start",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"start\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "AIVANTA bridge · start · node start"
+    },
+    {
+      "id": "0e2e218e-65e2-5136-97a9-1b855043e230",
+      "name": "Effort Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        50,
+        340
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"effd\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Tenant-filtered retrieval · project-artifacts · step · node effd"
+    },
+    {
+      "id": "59e2d24f-9702-59cc-8dba-79156c866331",
+      "name": "HRMS Availability",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        350,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"hrms\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "notes": "Tool gateway · hrms_availability · query · step · node hrms"
+    },
+    {
+      "id": "62759b13-6257-502c-b952-23cb0658030b",
+      "name": "Prepare · Resource Planner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        490,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/agent_prepare",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"res\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "notes": "Builds the governed prompt: template, tenant overrides, redacted RFP, upstream artifacts, output schema. · agent_prepare · node res"
+    },
+    {
+      "id": "562ff355-8003-57d2-83f3-cd0237482576",
+      "name": "Resource Planner",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        650,
+        460
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.task }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "={{ $json.system }}",
+          "maxIterations": 6
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "notes": "AIVANTA agent template RESOURCE_PLANNER · profile enterprise-fast"
+    },
+    {
+      "id": "39c567e2-3516-5b1a-aac9-db4ddd8a367e",
+      "name": "Model · Resource Planner",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        650,
+        660
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Prepare · Resource Planner').first().json.model }}"
+        },
+        "options": {
+          "responseFormat": "json_object",
+          "temperature": 0.1,
+          "timeout": 180000,
+          "maxRetries": 1
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "aivanta-gateway",
+          "name": "AIVANTA Model Gateway"
+        }
+      },
+      "notes": "OpenAI-compatible AIVANTA model gateway: enforces the tenant model allowlist and records tokens and cost."
+    },
+    {
+      "id": "6ece25e4-493d-5264-9ff4-c03aa6d8f0d5",
+      "name": "Record · Resource Planner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        830,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/agent_record",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"res\", execution_id: $execution.id, text: $json.output }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Validates the agent output against its typed schema and stores it as a run output. · agent_record · node res"
+    },
+    {
+      "id": "d9e14ee7-be0d-5218-805d-bc444ead87a3",
+      "name": "Request approval · Staffing Commitment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        750,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/approval_request",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"sapp\", execution_id: $execution.id, resume_url: $execution.resumeUrl }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Creates the approval for role pmo and hands AIVANTA the resume URL. · approval_request · node sapp"
+    },
+    {
+      "id": "497564f4-5709-55b3-8ae5-eb8f07728b61",
+      "name": "Wait · Staffing Commitment",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        910,
+        460
+      ],
+      "parameters": {
+        "resume": "webhook",
+        "httpMethod": "POST",
+        "options": {}
+      },
+      "webhookId": "9a43f89c-1172-586f-9250-c030d15726a4",
+      "notes": "Execution pauses here until the approver decides in AIVANTA (segregation of duties enforced there)."
+    },
+    {
+      "id": "e68d03d3-6726-56c1-9780-4bdf84d99681",
+      "name": "Decision · Staffing Commitment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1070,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/approval_result",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"sapp\", execution_id: $execution.id, decision: $json.body }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "AIVANTA bridge · approval_result · node sapp"
+    },
+    {
+      "id": "b475f47c-6cef-5d63-a0f3-f329551b78d2",
+      "name": "Staffing Commitment",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1230,
+        460
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fec7c634-5d97-5e07-a60c-5c4c1ce80685",
+              "leftValue": "={{ $json.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "Rejected → the branch stops and the run fails."
+    },
+    {
+      "id": "1f182954-ce04-5df7-a603-bec02b9a7427",
+      "name": "Create Jira Backlog",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1250,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"jira\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "notes": "Tool gateway · jira_backlog · create_epics · step · node jira"
+    },
+    {
+      "id": "b944e4af-9a09-56d9-9205-6a631dd000b8",
+      "name": "End",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1550,
+        460
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/internal/n8n/step",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ run_id: $('Trigger').first().json.body.run_id, node_id: \"end\", execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aivanta-bridge",
+          "name": "AIVANTA Bridge"
+        }
+      },
+      "executeOnce": true,
+      "notes": "Marks the end of the AIVANTA run · step · node end"
+    },
+    {
+      "id": "8b52c778-2d13-56f7-ac4d-72b9db9ba972",
+      "name": "Join · Resource Planner",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        340,
+        580
+      ],
+      "parameters": {
+        "numberInputs": 2
+      },
+      "notes": "Waits for every parallel branch before continuing."
+    }
+  ],
+  "connections": {
+    "Trigger": {
+      "main": [
+        [
+          {
+            "node": "Start · Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare · Resource Planner": {
+      "main": [
+        [
+          {
+            "node": "Resource Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model · Resource Planner": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Resource Planner",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resource Planner": {
+      "main": [
+        [
+          {
+            "node": "Record · Resource Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request approval · Staffing Commitment": {
+      "main": [
+        [
+          {
+            "node": "Wait · Staffing Commitment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait · Staffing Commitment": {
+      "main": [
+        [
+          {
+            "node": "Decision · Staffing Commitment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision · Staffing Commitment": {
+      "main": [
+        [
+          {
+            "node": "Staffing Commitment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start · Start": {
+      "main": [
+        [
+          {
+            "node": "Effort Plan",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HRMS Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Effort Plan": {
+      "main": [
+        [
+          {
+            "node": "Join · Resource Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HRMS Availability": {
+      "main": [
+        [
+          {
+            "node": "Join · Resource Planner",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Join · Resource Planner": {
+      "main": [
+        [
+          {
+            "node": "Prepare · Resource Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record · Resource Planner": {
+      "main": [
+        [
+          {
+            "node": "Request approval · Staffing Commitment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Staffing Commitment": {
+      "main": [
+        [
+          {
+            "node": "Create Jira Backlog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Jira Backlog": {
+      "main": [
+        [
+          {
+            "node": "End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "timezone": "UTC"
+  }
+}

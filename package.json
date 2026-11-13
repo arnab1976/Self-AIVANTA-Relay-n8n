@@ -1,0 +1,16 @@
+{
+  "name": "aivanta-relay",
+  "private": true,
+  "version": "1.0.0",
+  "description": "AIVANTA Relay — web workspace (npm workspaces)",
+  "workspaces": ["apps/web", "packages/graph-schema"],
+  "scripts": {
+    "dev": "npm run dev -w @aivanta/web",
+    "build": "npm run build -w @aivanta/web",
+    "start": "npm run start -w @aivanta/web",
+    "test:e2e": "playwright test -c tests/e2e/playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.48.2"
+  }
+}
